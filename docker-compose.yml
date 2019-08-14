@@ -1,0 +1,84 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - web_network
+    restart: always
+
+  redis:
+    image: redis
+    expose:
+      - 6379
+    networks:
+      - web_network
+
+  nginx:
+    build:
+      context: ./services/nginx
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - frontend-public:/var/www
+    ports:
+      - 80:80
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - web_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: arthas_networth
+    container_name: arthas_networth_backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "3000:3000"
+    expose:
+      - 3000
+    entrypoint: ./entrypoint.sh
+    depends_on:
+      - db
+      - redis
+    networks:
+      - web_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: arthas_networth_frontend
+    volumes:
+      - ./frontend:/app
+      - frontend-public:/app/dist
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: arthas_networth_worker
+    command: python worker.py
+    networks:
+      - web_network
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  db-data:
+  frontend-public:
+
+networks:
+  web_network:
+    driver: bridge

@@ -1,0 +1,4 @@
+*.jpg
+*.tif
+__pycache__
+node_modules
